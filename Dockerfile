@@ -1,24 +1,40 @@
-# Stage 1: Builder
-FROM python:3.10-slim-buster as builder
+# ---------- Stage 1: Builder ----------
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
+
+# Install pip and system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libglib2.0-0 \
+    libgl1-mesa-glx \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
-# Install dependencies into /install directory
-RUN pip install --no-cache-dir --target=/install -r requirements.txt
+# Install dependencies into a temp location
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Stage 2: Final image
-FROM python:3.10-slim-buster
+# ---------- Stage 2: Final Image ----------
+FROM python:3.11-slim
 
+ENV PATH="/install/bin:$PATH"
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /install /usr/local/lib/python3.10/site-packages
+# Copy installed packages
+COPY --from=builder /install /install
 
 # Copy application code
 COPY . .
 
-# Expose the port for Railway
+# Optional: restrict to only what's needed for runtime
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libgl1-mesa-glx \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Expose the port Railway expects
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
