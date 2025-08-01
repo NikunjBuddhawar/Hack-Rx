@@ -3,5 +3,7 @@ __pycache__/
 *.pyo
 *.pyd
 .env
-.venv/
-.ipynb_checkpoints/
+.git/
+.gitignore
+tests/
+*.ipynb
